@@ -4,6 +4,33 @@ prefix = Config.Displays.Prefix;
 discords = {}
 currentConnectors = 0;
 maxConnectors = Config.AllowedPerTick;
+hostname = GetConvar("sv_hostname")
+
+Citizen.CreateThread(function()
+  while true do 
+    Wait((1000 * 15)); -- Every 15 seconds 
+    if Config.HostDisplayQueue then 
+      if hostname ~= "default FXServer" and Queue:GetMax() > 0 then 
+        SetConvar("sv_hostname", "[" .. Queue:GetMax() .. "/" .. (Queue:GetMax() + 1) .. "] " .. hostname);
+        --print(prefix .. " Set server title: '" .. "[" .. "1" .. "/" .. (Queue:GetMax() + 1) .. "] " .. hostname .. "'")
+      end
+      if hostname ~= "default FXServer" and Queue:GetMax() == 0 then 
+        SetConvar("sv_hostname", hostname);
+        --print(prefix .. " Set server title: '" .. hostname .. "'")
+      end
+    end
+  end
+end)
+notSet = true;
+Citizen.CreateThread(function()
+  while notSet do 
+    if hostname == "default FXServer" then 
+      hostname = GetConvar("sv_hostname");
+    else 
+      notSet = false;
+    end
+  end 
+end)
 
 AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
   deferrals.defer();
@@ -19,8 +46,10 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
     if displayIndex > #displays then
       displayIndex = 1;
     end 
-    local msg = Config.Displays.Messages.MSG_CONNECTING:gsub("{QUEUE_NUM}", Queue:GetQueueNum(user)):gsub("{QUEUE_MAX}", Queue:GetMax());
+    local message = GetMessage(user);
+    local msg = message:gsub("{QUEUE_NUM}", Queue:GetQueueNum(user)):gsub("{QUEUE_MAX}", Queue:GetMax());
     deferrals.update(prefix .. " " .. msg .. displays[displayIndex]);
+    CancelEvent();
     displayIndex = displayIndex + 1;
   end
   -- If it got down here, they are now allowed to join the server 
